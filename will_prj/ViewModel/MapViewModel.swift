@@ -14,14 +14,15 @@ import FirebaseAuth
 import SwiftUI
 
 class MapViewModel: NSObject, ObservableObject {
-    @Published var userLocation: CLLocation?
-    @Published var nearbyUsers: [UserLocation] = []
+    //    @Published var userLocation: CLLocation?
     private let locationManager = CLLocationManager()
     private let firestoreManager = FirestoreManager()
     private var timer: Timer?
     
     @Published var userImage: Image?
     @Published var myUser: User?
+    @Published var nearbyUser: [User] = []
+    @Published var nearbyUserImage: [String: Image] = [:]
     
     override init() {
         super.init()
@@ -38,6 +39,7 @@ class MapViewModel: NSObject, ObservableObject {
         updateUserLocation()
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             self.updateUserLocation()
+            self.fetchNearbyUsers()
         }
     }
     
@@ -50,6 +52,7 @@ class MapViewModel: NSObject, ObservableObject {
             switch result {
             case .success(let success):
                 self.myUser = success
+                self.fetchNearbyUsers()
             case .failure(let failure):
                 print("Fetch user failed: \(failure)")
             }
@@ -65,10 +68,20 @@ class MapViewModel: NSObject, ObservableObject {
             }
         }
     }
-        
-    func updateUserLocation() {        
-        guard let location = userLocation else { return }
-        firestoreManager.updateUserLocation(location: location) { result in
+    
+    func fetchNearbyUserImage(){
+        for user in nearbyUser {
+            CloudinaryManager().fetchImage(publicId: user.uid) { image in
+                DispatchQueue.main.async {
+                    self.nearbyUserImage[user.uid] = image
+                }
+            }
+        }
+    }
+    
+    func updateUserLocation() {
+        guard let user = myUser else { return }
+        firestoreManager.updateUserLocation(location: CLLocation(latitude: user.latitude, longitude: user.longitude)) { result in
             switch result {
             case .success():
                 print("User location updated successfully.")
@@ -82,7 +95,7 @@ class MapViewModel: NSObject, ObservableObject {
                 switch result {
                 case .success(let data):
                     self.myUser?.latitude = data.coordinate.latitude
-                    self.myUser?.longitude = data.coordinate.longitude                    
+                    self.myUser?.longitude = data.coordinate.longitude
                 case .failure(let failure):
                     print("Get user location failed: \(failure.localizedDescription)")
                 }
@@ -90,27 +103,30 @@ class MapViewModel: NSObject, ObservableObject {
         }
     }
     
-    //    // MARK: - Fetch Nearby Users
-    //    func fetchNearbyUsers(radiusInMeters: Double) {
-    //        guard let location = userLocation else { return }
-    //        firestoreManager.fetchNearbyUsers(currentLocation: location, radiusInMeters: radiusInMeters) { result in
-    //            switch result {
-    //            case .success(let users):
-    //                DispatchQueue.main.async {
-    //                    self.nearbyUsers = users
-    //                }
-    //            case .failure(let error):
-    //                print("Failed to fetch nearby users: \(error.localizedDescription)")
-    //            }
-    //        }
-    //    }
+    // MARK: - Fetch Nearby Users
+    func fetchNearbyUsers() {
+        guard let user = myUser else { return }
+        firestoreManager.fetchNearbyUsers(currentLocation: CLLocation(latitude: user.latitude, longitude: user.longitude)) { result in
+            switch result {
+            case .success(let users):
+                DispatchQueue.main.async {
+                    self.nearbyUser = users
+                    self.fetchNearbyUserImage()
+                    print("Fetch nearby successful")
+                }
+            case .failure(let error):
+                print("Failed to fetch nearby users: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 extension MapViewModel: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let newLocation = locations.last else { return }
         DispatchQueue.main.async {
-            self.userLocation = newLocation
+            self.myUser?.latitude = newLocation.coordinate.latitude
+            self.myUser?.longitude = newLocation.coordinate.longitude
         }
     }
     

@@ -11,19 +11,20 @@ struct ContentView: View {
     @State var selectedTab: Int = 0
         
     var body: some View {
-//        if loginVm.isLoginSuccess{}
-        ZStack(alignment: .bottom) {
-            Group{
-                switch selectedTab{
-                case 0: MapScreen()
-                case 1: ChatListScreen()
-                case 2: ProfileScreen()
-                default: MapScreen()
+        NavigationStack{
+            ZStack(alignment: .bottom) {
+                Group{
+                    switch selectedTab{
+                    case 0: MapScreen()
+                    case 1: ChatListScreen()
+                    case 2: ProfileScreen()
+                    default: MapScreen()
+                    }
                 }
+                .frame(maxHeight: .infinity)
+                tabbar
             }
-            .frame(maxHeight: .infinity)
-            tabbar
-        }        
+        }
     }
     
     var tabbar: some View{

@@ -78,16 +78,13 @@ class LoginViewModel: ObservableObject {
     }
     
     @MainActor func saveUserInfo(){
-        user?.displayName = username        
-        uploadImage()
+        user?.displayName = username
         isLoggingIn = true
         if let user = user{
             FirestoreManager().saveUserData(user: user) { result in
                 switch result {
                 case .success:
-                    self.isLogin = true
-                    self.isEnterUserInfo = false
-                    self.isLoggingIn = false
+                    self.uploadImage()
                 case .failure(let failure):
                     print("save user failed: \(failure.localizedDescription)")
                 }
@@ -118,6 +115,9 @@ class LoginViewModel: ObservableObject {
                 cloudinary.uploadImage(data: data, userId: userId) { result in
                     switch result {
                     case .success:
+                        self.isLogin = true
+                        self.isEnterUserInfo = false
+                        self.isLoggingIn = false
                         print("Upload image success")
                     case .failure(let failure):
                         print("Upload image failed: \(failure)")

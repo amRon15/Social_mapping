@@ -17,6 +17,29 @@ class FirestoreManager {
     private let storage = Storage.storage()
     let user = Auth.auth().getUserID()
     
+    func fetchUserInfo(uids: [String], completion: @escaping (Result<[User], Error>) -> Void) {
+        let usersRef = db.collection("users")
+        
+        usersRef.whereField("uid", in: uids).getDocuments { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                completion(.failure(NSError(domain: "FirestoreError", code: -1, userInfo: [NSLocalizedDescriptionKey: "No documents found."])))
+                return
+            }
+            
+            let users = documents.compactMap { doc in
+                try? doc.data(as: User.self)
+            }
+            completion(.success(users))
+        }
+    }
+
+
+    
     func fetchUserData(completion: @escaping (Result<User, Error>) -> Void) {
         if let userId = user{
             let userRef = db.collection("users").document(userId)
@@ -38,7 +61,44 @@ class FirestoreManager {
             completion(.failure(NSError(domain: "AuthError", code: -1, userInfo: [NSLocalizedDescriptionKey: "User is not authenticated."])))
             return
         }
-        
+    }
+    
+    func fetchNearbyUsers(currentLocation: CLLocation, completion: @escaping (Result<[User], Error>) -> Void) {
+        db.collection("users").getDocuments { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                completion(.success([]))
+                return
+            }
+            
+            var nearbyUsers: [User] = []
+            
+            for document in documents {
+                guard let data = document.data() as? [String: Any],
+                      let latitude = data["latitude"] as? Double,
+                      let longitude = data["longitude"] as? Double,
+                      let email = data["email"] as? String,
+                      let uid = data["uid"] as? String,
+                      let id = data["id"] as? String,
+                      let displayName = data["displayName"] as? String else {
+                    continue
+                }
+                
+                let userLocation = CLLocation(latitude: latitude, longitude: longitude)
+                let distance = currentLocation.distance(from: userLocation)
+                
+                if distance <= 500 {
+                    let user = User(id: id, uid: uid, email: email, displayName: displayName, latitude: latitude, longitude: longitude)
+                    nearbyUsers.append(user)
+                }
+            }
+            
+            completion(.success(nearbyUsers))
+        }
     }
     
     func saveUserData(user: User, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -94,18 +154,42 @@ class FirestoreManager {
         }
     }
     
-    func sendMessage(to chatId: String, message: Message, completion: @escaping (Result<Void, Error>) -> Void) {
+    func sendMessage(chatId: String?, participants: [User], message: Message, completion: @escaping (Result<String, Error>) -> Void) {
+        let chatRef: DocumentReference
+        let isNewChat = (chatId == nil)
+        
+        if let chatId = chatId {
+            chatRef = db.collection("chats").document(chatId)
+        } else {
+            chatRef = db.collection("chats").document() // Create a new chat
+        }
+        
         do {
-            let chatRef = db.collection("chats").document(chatId)
-            let newMessageRef = chatRef.collection("messages").document()
-            var messageData = try message.toDictionary()
-            messageData["dateCreated"] = FieldValue.serverTimestamp()
+            let chatData: [String: Any]
+            if isNewChat {
+                // Creating a new chat
+                let chat = Chat(documentId: chatRef.documentID, users: participants, lastMessage: message)                
+                chatData = try chat.toDictionary()
+            } else {
+                // Updating an existing chat
+                chatData = ["lastMessage": try message.toDictionary()]
+            }
             
-            newMessageRef.setData(messageData) { error in
+            chatRef.setData(chatData, merge: true) { error in
                 if let error = error {
                     completion(.failure(error))
                 } else {
-                    completion(.success(()))
+                    // Save the message in the "messages" subcollection
+                    let messageRef = chatRef.collection("messages").document()
+                    let messageData = try? message.toDictionary()
+                    
+                    messageRef.setData(messageData ?? [:]) { error in
+                        if let error = error {
+                            completion(.failure(error))
+                        } else {
+                            completion(.success(chatRef.documentID)) // Return the chatId
+                        }
+                    }
                 }
             }
         } catch {
@@ -113,46 +197,104 @@ class FirestoreManager {
         }
     }
     
-    func observeMessages(in chatId: String, completion: @escaping (Result<[Message], Error>) -> Void) -> ListenerRegistration {
-        let chatRef = db.collection("chats").document(chatId)
-        return chatRef.collection("messages")
-            .order(by: "dateCreated")
+    
+    func fetchMessages(chatId: String, participants: [User], completion: @escaping (Result<(String?, [Message]), Error>) -> Void) {
+        if chatId != "" {
+            // Fetch all messages for the given chatId
+            let messagesRef = db.collection("chats").document(chatId).collection("messages")
+            messagesRef
+                .order(by: "dateCreated", descending: false)
+                .getDocuments { snapshot, error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else if let documents = snapshot?.documents {
+                        let messages: [Message] = documents.compactMap { doc in
+                            var message = try? JSONDecoder().decode(Message.self, from: JSONSerialization.data(withJSONObject: doc.data()))
+                            message?.id = doc.documentID
+                            return message
+                        }
+                        completion(.success((chatId, messages)))
+                    }
+                }
+        } else {
+            // Find chat by participants
+            let participantIds = participants.map { $0.uid }
+            let chatsRef = db.collection("chats")
+            
+            chatsRef
+                .whereField("usersId", isEqualTo: participantIds)
+                .getDocuments { snapshot, error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else if let documents = snapshot?.documents, let chatDocument = documents.first {
+                        let chatId = chatDocument.documentID
+                        let messagesRef = chatsRef.document(chatId).collection("messages")
+                        
+                        messagesRef
+                            .order(by: "dateCreated", descending: false)
+                            .getDocuments { snapshot, error in
+                                if let error = error {
+                                    completion(.failure(error))
+                                } else if let documents = snapshot?.documents {
+                                    let messages: [Message] = documents.compactMap { doc in
+                                        var message = try? JSONDecoder().decode(Message.self, from: JSONSerialization.data(withJSONObject: doc.data()))
+                                        message?.id = doc.documentID
+                                        return message
+                                    }
+                                    completion(.success((chatId, messages)))
+                                }
+                            }
+                    } else {
+                        completion(.failure(NSError(domain: "ChatError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Chat not found"])))
+                    }
+                }
+        }
+    }
+    
+    
+    func observeNewMessages(chatId: String, onNewMessage: @escaping (Result<Message, Error>) -> Void) -> ListenerRegistration? {
+        let db = Firestore.firestore()
+        let messagesRef = db.collection("chats").document(chatId).collection("messages")
+        
+        return messagesRef
+            .order(by: "dateCreated", descending: false)
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    completion(.failure(error))
-                    return
+                    onNewMessage(.failure(error))
+                } else if let documents = snapshot?.documentChanges {
+                    for change in documents {
+                        if change.type == .added {
+                            var message = try? JSONDecoder().decode(Message.self, from: JSONSerialization.data(withJSONObject: change.document.data()))
+                            message?.id = change.document.documentID
+                            if let newMessage = message {
+                                onNewMessage(.success(newMessage))
+                            }
+                        }
+                    }
                 }
-                
-                guard let documents = snapshot?.documents else {
-                    completion(.success([]))
-                    return
-                }
-                
-                let messages: [Message] = documents.compactMap { doc in
-                    try? doc.data(as: Message.self)
-                }
-                completion(.success(messages))
             }
     }
     
-    func fetchChats(for userId: String, completion: @escaping (Result<[Chat], Error>) -> Void) {
+    func fetchChats(completion: @escaping (Result<[Chat], Error>) -> Void) {
+        guard let currentUserId = user else {
+            completion(.failure(NSError(domain: "AuthError", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])))
+            return
+        }
+        
         db.collection("chats")
-            .whereField("participantIds", arrayContains: userId)
+            .whereField("usersId", arrayContains: currentUserId)
             .getDocuments { snapshot, error in
                 if let error = error {
                     completion(.failure(error))
-                    return
+                } else if let documents = snapshot?.documents {
+                    let chats: [Chat] = documents.compactMap { doc in
+                        var chat = try? JSONDecoder().decode(Chat.self, from: JSONSerialization.data(withJSONObject: doc.data()))
+                        chat?.documentId = doc.documentID
+                        return chat
+                    }
+                    completion(.success(chats))
                 }
-                
-                guard let documents = snapshot?.documents else {
-                    completion(.success([]))
-                    return
-                }
-                
-                let chats: [Chat] = documents.compactMap { doc in
-                    try? doc.data(as: Chat.self)
-                }
-                completion(.success(chats))
             }
     }
+    
 }

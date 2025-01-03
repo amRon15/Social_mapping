@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import MapKit
 
 extension View{
     func loadingBackground(_ isLoadding: Bool) -> some View{
@@ -33,5 +34,16 @@ extension View{
             .background(RoundedRectangle(cornerRadius: 20).fill(.blue))
             .font(.title3)
             .foregroundStyle(.white)
+    }
+    
+    func hideKeyboard(){
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+
+extension CLLocationCoordinate2D{
+    func location(_ user: User?) -> CLLocationCoordinate2D{
+        return CLLocationCoordinate2D(latitude: user?.latitude ?? 0, longitude: user?.longitude ?? 0)
     }
 }

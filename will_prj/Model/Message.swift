@@ -11,17 +11,14 @@ import FirebaseFirestore
 import Firebase
 
 struct Message: Codable, Identifiable {
-    var id: String? { documentId }
-    var documentId: String?
+    var id: String    
     let text: String
-    let uid: String
+    var user: User
     var dateCreated: Date? = Date()
-    let displayName: String
-    var profilePhotoURL: String = ""
 
     var isMessageOwner: Bool {
         guard let loggedInUserId = Auth.auth().currentUser?.uid else { return false }
-        return uid == loggedInUserId
+        return user.uid == loggedInUserId
     }
 
     func toDictionary() throws -> [String: Any] {

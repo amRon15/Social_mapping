@@ -10,6 +10,7 @@ import Foundation
 import FirebaseDatabase
 import FirebaseAuth
 import FirebaseFirestore
+import SwiftUI
 
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
@@ -17,51 +18,96 @@ class ChatViewModel: ObservableObject {
     private var chatId: String
     private var listenerRegistration: ListenerRegistration?
     private let firestoreManager = FirestoreManager()
-
-    init(chatId: String) {
-        self.chatId = chatId
-        observeMessages()
+    
+    private var user: User
+    var chatUser: User
+    private var participants: [User] = []
+    @Published var chatUserImage: Image?
+    
+    @Published var isLoadingChat: Bool = true
+    
+    init(user: User, chatUser: User, chatId: String?) {
+        self.chatId = chatId ?? ""
+        self.user = user
+        self.chatUser = chatUser
+        fetchUserImage()
+        participants = [user, chatUser]
+        fetchMessages()
+        //        observeMessages()
     }
-
+    
     deinit {
         listenerRegistration?.remove()
     }
-
-    // MARK: - Send Message
-    func sendMessage(displayName: String, profilePhotoURL: String) {
-        guard !messageText.isEmpty else { return }
-        
-        let message = Message(
-            documentId: nil,
-            text: messageText,
-            uid: Auth.auth().currentUser?.uid ?? "",
-            dateCreated: nil,
-            displayName: displayName,
-            profilePhotoURL: profilePhotoURL
-        )
-
-        firestoreManager.sendMessage(to: chatId, message: message) { [weak self] result in
-            switch result {
-            case .success:
-                DispatchQueue.main.async {
-                    self?.messageText = ""
+    
+    func fetchMessages(){
+        DispatchQueue.main.async {
+            self.firestoreManager.fetchMessages(chatId: self.chatId, participants: [self.user, self.chatUser]) { result in
+                switch result {
+                case .success(let (chatId, messages)):
+                    self.messages = messages
+                    if self.chatId == ""{
+                        if let chatId = chatId{
+                            self.chatId = chatId
+                        }
+                    }
+                    self.isLoadingChat = false
+                case .failure(let error):
+                    print("Failed to fetch messages: \(error.localizedDescription)")
                 }
-            case .failure(let error):
-                print("Failed to send message: \(error.localizedDescription)")
             }
         }
     }
-
+    
+    // MARK: - Send Message
+    func sendMessage() {
+        guard !messageText.isEmpty else { return }
+        
+        if chatId == ""{
+            let message = Message(id: UUID().uuidString, text: messageText, user: user, dateCreated: Date())
+            firestoreManager.sendMessage(chatId: nil, participants: participants, message: message) { result in
+                switch result {
+                case .success(let chatId):
+                    self.chatId = chatId
+                    print("Message sent successfully")
+                    self.messageText = ""
+                case .failure(let error):
+                    print("Failed to send message: \(error)")
+                }
+            }
+        } else {
+            let message = Message(id: UUID().uuidString, text: messageText, user: user, dateCreated: Date())
+            firestoreManager.sendMessage(chatId: chatId, participants: participants, message: message) { result in
+                switch result {
+                case .success(_):
+                    print("Message sent successfully")
+                    self.messageText = ""
+                    self.messages.append(message)
+                case .failure(let error):
+                    print("Failed to send message: \(error)")
+                }
+            }
+        }
+        
+    }
+    
     // MARK: - Observe Messages
     private func observeMessages() {
-        listenerRegistration = firestoreManager.observeMessages(in: chatId) { [weak self] result in
+        listenerRegistration = firestoreManager.observeNewMessages(chatId: chatId){ result in
             switch result {
             case .success(let messages):
-                DispatchQueue.main.async {
-                    self?.messages = messages
-                }
+                self.messages.append(messages)
+                print("Updated messages: \(messages)")
             case .failure(let error):
-                print("Failed to fetch messages: \(error.localizedDescription)")
+                print("Failed to observe messages: \(error)")
+            }
+        }
+    }
+    
+    func fetchUserImage(){
+        CloudinaryManager().fetchImage(publicId: chatUser.uid) { image in
+            DispatchQueue.main.async {
+                self.chatUserImage = image
             }
         }
     }

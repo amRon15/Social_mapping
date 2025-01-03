@@ -10,12 +10,20 @@ import Foundation
 struct Chat: Codable, Identifiable {
     var id: String? { documentId }
     var documentId: String?
-    let participantIds: [String]
-    var lastMessage: String = ""
-    var lastMessageDate: Date? = nil
-
+    var users: [User]
+    var usersId: [String]{
+        return users.map { $0.uid }
+    }
+    var lastMessage: Message
+    
     func toDictionary() throws -> [String: Any] {
-        let data = try JSONEncoder().encode(self)
-        return try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any] ?? [:]
+        var dictionary = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(self),
+            options: .allowFragments
+        ) as? [String: Any] ?? [:]
+        
+        // 手动添加 usersId
+        dictionary["usersId"] = usersId
+        return dictionary
     }
 }

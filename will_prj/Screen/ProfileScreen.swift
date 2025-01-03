@@ -58,8 +58,7 @@ struct ProfileScreen: View {
                 }
                 .toolbar{
                     ToolbarItem(placement: .confirmationAction) {
-                        Image(systemName: "gearshape")
-                            .font(.title2)
+                        Image(systemName: "gearshape")                            
                     }
                 }
             }

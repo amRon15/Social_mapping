@@ -14,34 +14,55 @@ struct MapScreen: View {
     var body: some View {
         VStack{
             Map{
-                Annotation(vm.myUser?.displayName ?? "My User", coordinate: CLLocationCoordinate2D(latitude: vm.userLocation?.coordinate.latitude ?? 0, longitude: vm.userLocation?.coordinate.longitude ?? 0)){
+                Annotation(vm.myUser?.displayName ?? "My User", coordinate: CLLocationCoordinate2D().location(vm.myUser)){
                     vm.userImage?
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 50, height: 50)
                         .clipShape(Circle())
                 }
-            }
-            .mapStyle(.hybrid(elevation: .realistic))
-            .overlay {
-                HStack{
-                    Button {
-                        withAnimation(.smooth) {
-                            //                            vm.isSearching.toggle()
+                MapCircle(center: CLLocationCoordinate2D().location(vm.myUser), radius: 500)
+                    .foregroundStyle(.blue.opacity(0.3))
+                    .mapOverlayLevel(level: .aboveRoads)
+                
+                ForEach(vm.nearbyUser){user in
+                    if user.uid != vm.myUser?.uid{
+                        Annotation(user.displayName ?? "Annoymous", coordinate: CLLocationCoordinate2D().location(user)) {
+                            NavigationLink {
+                                ChatScreen(user: vm.myUser!, chatUser: user, chatid: nil)
+                            } label: {
+                                vm.nearbyUserImage[user.uid]?
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(Circle())
+                            }
                         }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.title)
-                            .foregroundStyle(.white)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 20).fill(.black))
                     }
                 }
-                .padding(30)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
+            //                .mapStyle(.(elevation: .realistic))
+            //                .overlay {
+            //                    HStack{
+            //                        Button {
+            //                            withAnimation(.smooth) {
+            //                                //                            vm.isSearching.toggle()
+            //                            }
+            //                        } label: {
+            //                            Image(systemName: "magnifyingglass")
+            //                                .font(.title)
+            //                                .foregroundStyle(.white)
+            //                                .padding()
+            //                                .background(RoundedRectangle(cornerRadius: 20).fill(.black))
+            //                        }
+            //                    }
+            //                    .padding(30)
+            //                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            //                }
+            
         }
-        .frame(maxHeight: .infinity)        
+        .toolbar(.hidden)
+        .frame(maxHeight: .infinity)
         .onDisappear{
             vm.stopUpdateUserLocation()
         }
