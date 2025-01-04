@@ -43,7 +43,7 @@ class LoginViewModel: ObservableObject {
     @Published var isEnterUserInfo: Bool = false
     @Published var avaterItem: PhotosPickerItem?
     @Published var avatarImage: Image?
-    @Published var username: String = ""    
+    @Published var username: String = ""
     
     let auth = Auth.auth()
     
@@ -83,10 +83,10 @@ class LoginViewModel: ObservableObject {
         if let user = user{
             FirestoreManager().saveUserData(user: user) { result in
                 switch result {
-                case .success:
-                    self.uploadImage()
-                case .failure(let failure):
-                    print("save user failed: \(failure.localizedDescription)")
+                    case .success:
+                        self.uploadImage()
+                    case .failure(let failure):
+                        print("save user failed: \(failure.localizedDescription)")
                 }
             }
         }
@@ -94,7 +94,7 @@ class LoginViewModel: ObservableObject {
     
     func saveAccountToKeychain(){
         KeychainManager().storePassword(account: email, password: password)
-        self.isBiometricLogin = false        
+        self.isBiometricLogin = false
         self.isEnterUserInfo = true
         loginWithEmail()
     }
@@ -112,16 +112,11 @@ class LoginViewModel: ObservableObject {
     @MainActor func uploadImage(){
         if let data = ImageRenderer(content: avatarImage).uiImage?.jpegData(compressionQuality: 0.8){
             if let userId = user?.uid{
-                cloudinary.uploadImage(data: data, userId: userId) { result in
-                    switch result {
-                    case .success:
-                        self.isLogin = true
-                        self.isEnterUserInfo = false
-                        self.isLoggingIn = false
-                        print("Upload image success")
-                    case .failure(let failure):
-                        print("Upload image failed: \(failure)")
-                    }
+                cloudinary.uploadImage(data: data, userId: userId) { _ in
+                    self.isLogin = true
+                    self.isEnterUserInfo = false
+                    self.isLoggingIn = false
+                    
                 }
             }
         }
@@ -178,14 +173,14 @@ class LoginViewModel: ObservableObject {
             if let err = error {
                 self.isError = true
                 switch err.code {
-                case LAError.Code.biometryNotEnrolled.rawValue:
-                    self.biometricErrorMessage = "not enrolled"
-                case LAError.Code.passcodeNotSet.rawValue:
-                    self.biometricErrorMessage = "passcode not set"
-                case LAError.Code.biometryNotAvailable.rawValue:
-                    self.biometricErrorMessage = "not available"
-                default:
-                    self.biometricErrorMessage = "Unknown Error"
+                    case LAError.Code.biometryNotEnrolled.rawValue:
+                        self.biometricErrorMessage = "not enrolled"
+                    case LAError.Code.passcodeNotSet.rawValue:
+                        self.biometricErrorMessage = "passcode not set"
+                    case LAError.Code.biometryNotAvailable.rawValue:
+                        self.biometricErrorMessage = "not available"
+                    default:
+                        self.biometricErrorMessage = "Unknown Error"
                 }
             }
         }
@@ -195,7 +190,7 @@ class LoginViewModel: ObservableObject {
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
                                localizedReason: "Authentication is required", reply: {
             success, error in
-               
+            
             DispatchQueue.main.async {
                 if let error = error {
                     self.isError = true

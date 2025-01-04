@@ -10,6 +10,8 @@ import MapKit
 
 struct MapScreen: View {
     @StateObject var vm: MapViewModel = MapViewModel()
+    @State private var SelectedUser: User?
+    @State private var ShowOtherProfile = false
     
     var body: some View {
         VStack{
@@ -25,17 +27,30 @@ struct MapScreen: View {
                     .foregroundStyle(.blue.opacity(0.3))
                     .mapOverlayLevel(level: .aboveRoads)
                 
-                ForEach(vm.nearbyUser){user in
-                    if user.uid != vm.myUser?.uid{
-                        Annotation(user.displayName ?? "Annoymous", coordinate: CLLocationCoordinate2D().location(user)) {
-                            NavigationLink {
-                                ChatScreen(user: vm.myUser!, chatUser: user, chatid: nil)
+                ForEach(vm.nearbyUser) { user in
+                    if user.uid != vm.myUser?.uid {
+                        Annotation(user.displayName ?? "Anonymous", coordinate: CLLocationCoordinate2D().location(user)) {
+                            Button {
+                                SelectedUser = user
+                                ShowOtherProfile = true
                             } label: {
-                                vm.nearbyUserImage[user.uid]?
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 50, height: 50)
-                                    .clipShape(Circle())
+                                if let userImage = vm.nearbyUserImage[user.uid] {
+                                    userImage
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(Circle())
+                                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                        .shadow(radius: 3)
+                                } else {
+                                    Image(systemName: "person.circle.fill")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 50, height: 50)
+                                        .foregroundColor(.gray)
+                                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                        .shadow(radius: 3)
+                                }
                             }
                         }
                     }
@@ -63,6 +78,11 @@ struct MapScreen: View {
         }
         .toolbar(.hidden)
         .frame(maxHeight: .infinity)
+        .sheet(isPresented: $ShowOtherProfile) {
+            if let user = SelectedUser {
+                UserProfileSheet(user: user, myUser: vm.myUser!, userImage: vm.nearbyUserImage[user.uid])
+            }
+        }
         .onDisappear{
             vm.stopUpdateUserLocation()
         }
@@ -93,6 +113,98 @@ struct MapScreen: View {
     //                .autocorrectionDisabled()
     //        }
     //    }
+}
+
+struct UserProfileSheet: View {
+    let user: User
+    let myUser: User
+    let userImage: Image?
+    @Environment(\.dismiss) private var dismiss
+    @State private var navigateToChat = false
+    @State private var chatId: String?
+    @State private var isLoading = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                userImage?
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 120, height: 120)
+                    .clipShape(Circle())
+                    .padding(.top, 30)
+                
+                Text(user.displayName ?? "null")
+                    .font(.title2)
+                    .bold()
+                
+                Spacer()
+                
+                if isLoading {
+                    ProgressView()
+                } else {
+                    Button {
+                        startChat()
+                    } label: {
+                        HStack {
+                            Image(systemName: "message.fill")
+                            Text("Start Chat")
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Close")
+                        .foregroundColor(.blue)
+                        .padding(.bottom, 30)
+                }
+            }
+            .navigationDestination(isPresented: $navigateToChat) {
+                if let chatId = chatId {
+                    ChatScreen(user: myUser, chatUser: user, chatid: chatId)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+    
+    private func startChat() {
+        isLoading = true
+        let firestoreManager = FirestoreManager()
+        
+        // Create initial message
+        let message = Message(
+            id: UUID().uuidString,
+            text: "",
+            user: user,
+            dateCreated: Date()
+        )
+        
+        // Send initial message to create chat
+        firestoreManager.sendMessage(
+            chatId: nil,
+            participants: [myUser, user],
+            message: message
+        ) { result in
+            isLoading = false
+            
+            switch result {
+            case .success(let newChatId):
+                chatId = newChatId
+                navigateToChat = true
+            case .failure(let error):
+                print("Error creating chat: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 #Preview {
