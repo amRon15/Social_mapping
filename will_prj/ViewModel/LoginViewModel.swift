@@ -148,7 +148,9 @@ class LoginViewModel: ObservableObject {
                 email: firebaseUser.email ?? "",
                 displayName: firebaseUser.displayName ?? "",
                 latitude: 0,
-                longitude: 0
+                longitude: 0,
+                friendRequests: [],
+                friends: []
             )
             
             DispatchQueue.main.async {
@@ -252,7 +254,9 @@ class LoginViewModel: ObservableObject {
                 email: firebaseUser.email ?? "",
                 displayName: firebaseUser.displayName,
                 latitude: 0,
-                longitude: 0
+                longitude: 0,
+                friendRequests: [],
+                friends: []
             )
             
             DispatchQueue.main.async {

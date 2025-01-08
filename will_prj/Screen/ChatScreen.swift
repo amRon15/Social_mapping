@@ -87,10 +87,3 @@ struct ChatScreen: View {
         .loadingBackground(vm.isLoadingChat)
     }
 }
-
-
-
-#Preview {
-    let user = User(id: "1", uid: "1", email: "1", latitude: 0, longitude: 0)
-    ChatScreen(user: user, chatUser: user, chatid: "2")
-}

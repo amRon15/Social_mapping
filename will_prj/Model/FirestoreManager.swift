@@ -18,6 +18,11 @@ class FirestoreManager {
     let user = Auth.auth().getUserID()
     
     func fetchUserInfo(uids: [String], completion: @escaping (Result<[User], Error>) -> Void) {
+        guard !uids.isEmpty else {
+            completion(.success([]))
+            return
+        }
+        
         let usersRef = db.collection("users")
         
         usersRef.whereField("uid", in: uids).getDocuments { snapshot, error in
@@ -37,7 +42,6 @@ class FirestoreManager {
             completion(.success(users))
         }
     }
-
 
     
     func fetchUserData(completion: @escaping (Result<User, Error>) -> Void) {
@@ -84,7 +88,9 @@ class FirestoreManager {
                       let email = data["email"] as? String,
                       let uid = data["uid"] as? String,
                       let id = data["id"] as? String,
-                      let displayName = data["displayName"] as? String else {
+                      let displayName = data["displayName"] as? String,
+                      let friendRequests = data["friendRequests"] as? [String],
+                      let friends = data["friends"] as? [String] else {
                     continue
                 }
                 
@@ -92,7 +98,14 @@ class FirestoreManager {
                 let distance = currentLocation.distance(from: userLocation)
                 
                 if distance <= 500 {
-                    let user = User(id: id, uid: uid, email: email, displayName: displayName, latitude: latitude, longitude: longitude)
+                    let user = User(id: id,
+                                  uid: uid,
+                                  email: email,
+                                  displayName: displayName,
+                                  latitude: latitude,
+                                  longitude: longitude,
+                                  friendRequests: friendRequests,
+                                  friends: friends)
                     nearbyUsers.append(user)
                 }
             }
@@ -100,7 +113,6 @@ class FirestoreManager {
             completion(.success(nearbyUsers))
         }
     }
-    
     func saveUserData(user: User, completion: @escaping (Result<Void, Error>) -> Void) {
         let userRef = db.collection("users").document(user.uid)
         print(user.uid)
@@ -296,5 +308,124 @@ class FirestoreManager {
                 }
             }
     }
+    
+    func checkExistingChat(between users: [User], completion: @escaping (Result<String?, Error>) -> Void) {
+        let userIds = users.map { $0.uid }.sorted()
+        let chatsRef = db.collection("chats")
+        
+        chatsRef
+            .whereField("usersId", isEqualTo: userIds)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                if let document = snapshot?.documents.first {
+                    completion(.success(document.documentID))
+                } else {
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No existing chat found"])))
+                }
+            }
+    }
+    
+    func fetchUser(userId: String, completion: @escaping (Result<User, Error>) -> Void) {
+        let usersRef = db.collection("users")
+        
+        usersRef.document(userId).getDocument { snapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = snapshot?.data(),
+                  let user = try? Firestore.Decoder().decode(User.self, from: data) else {
+                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode user"])))
+                return
+            }
+            
+            completion(.success(user))
+        }
+    }
+    
+    func sendFriendRequest(from currentUserId: String, to userId: String, completion: @escaping (Error?) -> Void) {
+        let userRef = db.collection("users").document(userId)
+        
+        userRef.getDocument { (document, error) in
+            if let error = error {
+                completion(error)
+                return
+            }
+            
+            guard let document = document, document.exists,
+                  let friendRequests = document.data()?["friendRequests"] as? [String] else {
+                completion(NSError(domain: "FirestoreError", code: -1,
+                                 userInfo: [NSLocalizedDescriptionKey: "User document not found"]))
+                return
+            }
+            
+            if friendRequests.contains(currentUserId) {
+                completion(NSError(domain: "FirestoreError", code: -1,
+                                 userInfo: [NSLocalizedDescriptionKey: "Friend request already sent"]))
+                return
+            }
+            
+            userRef.updateData([
+                "friendRequests": FieldValue.arrayUnion([currentUserId])
+            ]) { error in
+                if let error = error {
+                    completion(error)
+                    return
+                }
+                completion(nil)
+            }
+        }
+    }
+    func acceptFriendRequest(currentUserId: String, requesterId: String, completion: @escaping (Error?) -> Void) {
+        let batch = db.batch()
+        let currentUserRef = db.collection("users").document(currentUserId)
+        let requesterRef = db.collection("users").document(requesterId)
+        
+        // Remove friend request and add to friends list for current user
+        batch.updateData([
+            "friendRequests": FieldValue.arrayRemove([requesterId]),
+            "friends": FieldValue.arrayUnion([requesterId])
+        ], forDocument: currentUserRef)
+        
+        // Add current user to requester's friends list
+        batch.updateData([
+            "friends": FieldValue.arrayUnion([currentUserId])
+        ], forDocument: requesterRef)
+        
+        batch.commit(completion: completion)
+    }
+
+    func declineFriendRequest(currentUserId: String, requesterId: String, completion: @escaping (Error?) -> Void) {
+        let currentUserRef = db.collection("users").document(currentUserId)
+        
+        currentUserRef.updateData([
+            "friendRequests": FieldValue.arrayRemove([requesterId])
+        ], completion: completion)
+    }
+    
+    func checkPendingFriendRequest(from currentUserId: String, to userId: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let userRef = db.collection("users").document(userId)
+        
+        userRef.getDocument { (document, error) in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let document = document,
+                  let friendRequests = document.data()?["friendRequests"] as? [String] else {
+                completion(.success(false))
+                return
+            }
+            
+            completion(.success(friendRequests.contains(currentUserId)))
+        }
+    }
+    
     
 }

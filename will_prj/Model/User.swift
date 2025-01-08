@@ -14,4 +14,6 @@ struct User: Codable, Identifiable {
     var displayName: String?    
     var latitude: Double
     var longitude: Double
+    var friendRequests: [String]
+    var friends: [String]
 }
