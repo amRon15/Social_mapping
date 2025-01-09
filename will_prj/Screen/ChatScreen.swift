@@ -18,6 +18,10 @@ struct ChatScreen: View {
         VStack {
             ScrollView(.vertical){
                 VStack{
+                    if vm.errorMessage != ""{
+                        Text("\(vm.errorMessage)")
+                            .foregroundStyle(.pink)
+                    }
                     ForEach(vm.messages){message in
                         if message.isMessageOwner{
                             HStack{

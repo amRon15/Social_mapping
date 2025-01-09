@@ -15,6 +15,7 @@ import SwiftUI
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var messageText: String = ""
+    @Published var errorMessage: String = ""
     private var chatId: String
     private var listenerRegistration: ListenerRegistration?
     private let firestoreManager = FirestoreManager()
@@ -33,7 +34,6 @@ class ChatViewModel: ObservableObject {
         fetchUserImage()
         participants = [user, chatUser]
         fetchMessages()
-        //        observeMessages()
     }
     
     deinit {
@@ -52,8 +52,10 @@ class ChatViewModel: ObservableObject {
                         }
                     }
                     self.isLoadingChat = false
+                    self.observeMessages()
                 case .failure(let error):
                     print("Failed to fetch messages: \(error.localizedDescription)")
+                    self.errorMessage = error.localizedDescription
                 }
             }
         }

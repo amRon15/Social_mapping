@@ -35,7 +35,7 @@ class ChatListViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.chats = chats.sorted(by: { ($0.lastMessage.dateCreated ?? Date.distantPast) > ($1.lastMessage.dateCreated ?? Date.distantPast) })
                     self?.getUserInfo()
-                    self?.isLoadingChat = false
+                    self?.isLoadingChat = false                    
                 }
             case .failure(let error):
                 print("Failed to fetch chats: \(error.localizedDescription)")
