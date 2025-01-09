@@ -9,16 +9,19 @@ import SwiftUI
 
 struct ContentView: View {
     @State var selectedTab: Int = 0
-        
+    @StateObject var frdVm: FriendListViewModel = FriendListViewModel()
+    
     var body: some View {
         NavigationStack{
             ZStack(alignment: .bottom) {
                 Group{
                     switch selectedTab{
                     case 0: MapScreen()
+                            .environmentObject(frdVm)
                     case 1: ChatListScreen()
-                    case 2: ProfileScreen()
+                    case 2: ProfileScreen(FirestoreManager().user ?? "")
                     default: MapScreen()
+                            .environmentObject(frdVm)
                     }
                 }
                 .frame(maxHeight: .infinity)

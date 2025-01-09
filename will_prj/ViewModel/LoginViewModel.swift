@@ -22,7 +22,7 @@ class LoginViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     @Published var isLogin: Bool = false
-    @Published var isLoggingIn: Bool = false
+    @Published var isLoggingIn: Bool = false    
     private var isCreatingAc: Bool = false
     
     @Published var createAccountResult: String = ""
@@ -46,6 +46,7 @@ class LoginViewModel: ObservableObject {
     @Published var username: String = ""
     
     let auth = Auth.auth()
+    
     
     init(){
         if FirebaseAuthManager().isAuth(){

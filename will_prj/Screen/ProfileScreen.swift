@@ -8,8 +8,13 @@
 import SwiftUI
 
 struct ProfileScreen: View {
-    @StateObject var vm: ProfileViewModel = ProfileViewModel()
+    @StateObject var vm: ProfileViewModel
     @EnvironmentObject var loginVm: LoginViewModel
+    
+    init(_ userId: String){
+        _vm = StateObject(wrappedValue: ProfileViewModel(userId))
+    }
+    
     var body: some View {
         NavigationStack{
             ScrollView(.vertical) {
@@ -21,26 +26,27 @@ struct ProfileScreen: View {
                         .clipShape(Circle())
                     Text(vm.user?.displayName ?? "Annoymous")
                         .font(.title2)
-                    HStack{
-                        Button("Add") {
-                            
-                        }
-                        .profileButtonStyle()
-                        Button("Message") {
-                            
-                        }
-                        .profileButtonStyle()
-                    }
-                    .padding(.horizontal)
-                    
-                    Button {
-                        vm.isLogout.toggle()
-                    } label: {
-                        Text("Logout")
+                    if !vm.isMyUser{
+                        HStack{
+                            Button("Add") {
+                                
+                            }
                             .profileButtonStyle()
-                            .padding(.horizontal)
+                            Button("Message") {
+                                
+                            }
+                            .profileButtonStyle()
+                        }
+                        .padding(.horizontal)
+                    }else{
+                        Button {
+                            vm.isLogout.toggle()
+                        } label: {
+                            Text("Logout")
+                                .profileButtonStyle()
+                                .padding(.horizontal)
+                        }
                     }
-
                     Divider()
                         .padding(.top, 20)
                     LazyVGrid(columns: vm.columns){
@@ -67,5 +73,5 @@ struct ProfileScreen: View {
 }
 
 #Preview {
-    ProfileScreen()
+//    ProfileScreen()
 }

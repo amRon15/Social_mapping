@@ -44,8 +44,8 @@ class FirestoreManager {
     }
 
     
-    func fetchUserData(completion: @escaping (Result<User, Error>) -> Void) {
-        if let userId = user{
+    func fetchUserData(_ userId: String?, completion: @escaping (Result<User, Error>) -> Void) {
+        if let userId = userId{
             let userRef = db.collection("users").document(userId)
             userRef.getDocument { document, error in
                 if let error = error {

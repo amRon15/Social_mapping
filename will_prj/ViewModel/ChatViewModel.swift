@@ -33,7 +33,6 @@ class ChatViewModel: ObservableObject {
         fetchUserImage()
         participants = [user, chatUser]
         fetchMessages()
-        //        observeMessages()
     }
     
     deinit {
@@ -52,6 +51,7 @@ class ChatViewModel: ObservableObject {
                         }
                     }
                     self.isLoadingChat = false
+                    self.observeMessages()
                 case .failure(let error):
                     print("Failed to fetch messages: \(error.localizedDescription)")
                 }
@@ -70,6 +70,7 @@ class ChatViewModel: ObservableObject {
                 case .success(let chatId):
                     self.chatId = chatId
                     print("Message sent successfully")
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     self.messageText = ""
                 case .failure(let error):
                     print("Failed to send message: \(error)")
@@ -82,7 +83,8 @@ class ChatViewModel: ObservableObject {
                 case .success(_):
                     print("Message sent successfully")
                     self.messageText = ""
-                    self.messages.append(message)
+//                    self.messages.append(message)
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 case .failure(let error):
                     print("Failed to send message: \(error)")
                 }

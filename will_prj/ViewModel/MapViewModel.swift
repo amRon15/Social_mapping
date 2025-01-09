@@ -14,6 +14,7 @@ import FirebaseAuth
 import SwiftUI
 
 class MapViewModel: NSObject, ObservableObject {
+    let user = Auth.auth().getUserID()
     //    @Published var userLocation: CLLocation?
     private let locationManager = CLLocationManager()
     private let firestoreManager = FirestoreManager()
@@ -24,6 +25,11 @@ class MapViewModel: NSObject, ObservableObject {
     @Published var nearbyUser: [User] = []
     @Published var nearbyUserImage: [String: Image] = [:]
     
+    @Published var selectedUser: User?
+    @Published var showOtherProfile: Bool = false
+    
+    @Published var showFriendList: Bool = false
+    
     override init() {
         super.init()
         locationManager.delegate = self
@@ -31,7 +37,9 @@ class MapViewModel: NSObject, ObservableObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         fetchUserImage()
-        getUserInfo()
+        if let user = user{
+            getUserInfo(user)
+        }
         startUpdateUserLocation()
     }
     
@@ -47,8 +55,8 @@ class MapViewModel: NSObject, ObservableObject {
         timer?.invalidate()
     }
     
-    func getUserInfo(){
-        FirestoreManager().fetchUserData { result in
+    func getUserInfo(_ userId: String){
+        FirestoreManager().fetchUserData(userId) { result in
             switch result {
             case .success(let success):
                 self.myUser = success

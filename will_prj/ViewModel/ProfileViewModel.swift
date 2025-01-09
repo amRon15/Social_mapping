@@ -12,15 +12,19 @@ class ProfileViewModel: ObservableObject{
     @Published var isLogout: Bool = false
     @Published var user: User?
     @Published var userImage: Image?
+    @Published var userId: String?
+    @Published var isMyUser: Bool = true
     
     let columns = [GridItem(),GridItem()]
     
-    init(){
-        getUserData()
+    init(_ user: String){
+        self.userId = userId
+        getUserData(user)
+        isMyUser = FirestoreManager().user == userId
     }
     
-    func getUserData(){
-        FirestoreManager().fetchUserData { result in
+    func getUserData(_ userId: String){
+        FirestoreManager().fetchUserData(userId) { result in
             switch result {
             case .success(let success):
                 self.user = success
@@ -29,9 +33,11 @@ class ProfileViewModel: ObservableObject{
             }
         }
         
-        if let userId = FirestoreManager().user{
-            CloudinaryManager().fetchImage(publicId: userId) { result in
-                DispatchQueue.main.async{
+        CloudinaryManager().fetchImage(publicId: userId) { result in
+            DispatchQueue.main.async{
+                if result == nil{
+                    self.userImage = Image(systemName: "person.crop.circle.fill")
+                } else{
                     self.userImage = result
                 }
             }

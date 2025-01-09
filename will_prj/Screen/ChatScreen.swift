@@ -63,6 +63,7 @@ struct ChatScreen: View {
             .background(RoundedRectangle(cornerRadius: 20).fill(.gray))
             .padding()
         }
+        .loadingBackground(vm.isLoadingChat)
         .onTapGesture {
             hideKeyboard()
         }
@@ -83,7 +84,6 @@ struct ChatScreen: View {
                     Text("\(vm.chatUser.displayName ?? "Annoymous")")
                 }
             }
-        }
-        .loadingBackground(vm.isLoadingChat)
+        }        
     }
 }

@@ -21,8 +21,7 @@ struct Chat: Codable, Identifiable {
             with: JSONEncoder().encode(self),
             options: .allowFragments
         ) as? [String: Any] ?? [:]
-        
-        // 手动添加 usersId
+                
         dictionary["usersId"] = usersId
         return dictionary
     }
