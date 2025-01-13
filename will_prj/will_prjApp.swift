@@ -8,12 +8,18 @@
 import SwiftUI
 import FirebaseCore
 import Cloudinary
+import ActivityKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        FirebaseApp.configure()                        
+        FirebaseApp.configure()
+        GroupViewModel.shared.endLiveActivity()
         return true
+    }
+    
+    func applicationWillTerminate(){
+        GroupViewModel.shared.endLiveActivity()
     }
 }
 
@@ -21,11 +27,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct will_prjApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject var vm: LoginViewModel = LoginViewModel()
+    
     var body: some Scene {
         WindowGroup {
             if vm.isLogin{
                 ContentView()
                     .environmentObject(vm)
+                    .onDisappear{
+                        GroupActivityManager().endLiveActivity()
+                    }
             }else{
                 LoginScreen()
                     .environmentObject(vm)

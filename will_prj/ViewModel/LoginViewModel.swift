@@ -14,7 +14,6 @@ import LocalAuthentication
 import _PhotosUI_SwiftUI
 import SwiftUICore
 import FirebaseFirestore
-import FirebaseStorage
 import SwiftUI
 
 class LoginViewModel: ObservableObject {
@@ -218,51 +217,6 @@ class LoginViewModel: ObservableObject {
             }
         } else{
             biometricErrorMessage = "Not register yet"
-        }
-    }
-    
-    // MARK: - Apple Sign-In
-    func handleAppleSignIn(credential: ASAuthorizationAppleIDCredential, completion: @escaping (Bool) -> Void) {
-        guard let idToken = credential.identityToken, let idTokenString = String(data: idToken, encoding: .utf8) else {
-            self.errorMessage = "Unable to fetch identity token."
-            completion(false)
-            return
-        }
-        
-        let firebaseCredential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: "")
-        
-        
-        auth.signIn(with: firebaseCredential) { [weak self] result, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self?.errorMessage = error.localizedDescription
-                    completion(false)
-                }
-                return
-            }
-            
-            guard let firebaseUser = result?.user else {
-                DispatchQueue.main.async {
-                    self?.errorMessage = "User not found."
-                    completion(false)
-                }
-                return
-            }
-            
-            self?.user = User(
-                id: UUID().uuidString,
-                uid: firebaseUser.uid,
-                email: firebaseUser.email ?? "",
-                displayName: firebaseUser.displayName,
-                latitude: 0,
-                longitude: 0,
-                friendRequests: [],
-                friends: []
-            )
-            
-            DispatchQueue.main.async {
-                completion(true)
-            }
         }
     }
     

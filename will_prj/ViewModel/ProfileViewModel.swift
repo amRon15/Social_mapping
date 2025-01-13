@@ -15,6 +15,8 @@ class ProfileViewModel: ObservableObject{
     @Published var userId: String?
     @Published var isMyUser: Bool = true
     
+    @Published var showAlert: Bool = false
+    
     let columns = [GridItem(),GridItem()]
     
     init(_ user: String){

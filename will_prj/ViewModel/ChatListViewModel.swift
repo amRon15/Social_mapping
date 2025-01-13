@@ -21,6 +21,14 @@ class ChatListViewModel: ObservableObject {
     
     @Published var isLoadingChat: Bool = true
     
+    @Published var showFriendList: Bool = false
+    @Published var friends: [User] = []
+    @Published var friendsImage: [String: Image] = [:]
+    @Published var isLoadingFriends: Bool = false
+    @Published var selectedUser: User?
+    
+    @Published var isNavigateToChat: Bool = false
+    
     var currentUser: User?
     
     init() {
@@ -101,6 +109,43 @@ class ChatListViewModel: ObservableObject {
                 }
             }
         }
-        
+    }
+    
+    func loadFriends() {
+        guard let currentUser = currentUser else { return }
+        isLoadingFriends = true
+        firestoreManager.fetchUserInfo(uids: currentUser.friends) { result in
+            switch result {
+            case .success(let users):
+                DispatchQueue.main.async {
+                    self.friends = users
+                    self.isLoadingFriends = false
+                    self.fetchFriendsImage()
+                }
+            case .failure(let error):
+                print("Error loading friends: \(error.localizedDescription)")
+                self.isLoadingFriends = false
+            }
+        }
+    }
+    
+    func fetchFriendsImage(){
+        for friend in friends {
+            CloudinaryManager().fetchImage(publicId: friend.uid) { image in
+                DispatchQueue.main.async{
+                    self.friendsImage[friend.uid] = image
+                }
+            }
+        }
+    }
+    
+    func getFriendsImage(_ user: User) -> Image{
+        return friendsImage[user.uid] ?? Image(systemName: "person.crop.circle.fill")
+    }
+    
+    func navigateToChat(_ user: User){
+        isNavigateToChat.toggle()
+        showFriendList.toggle()
+        selectedUser = user
     }
 }

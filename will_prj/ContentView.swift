@@ -9,8 +9,9 @@ import SwiftUI
 
 struct ContentView: View {
     @State var selectedTab: Int = 0
-    @StateObject var frdVm: FriendListViewModel = FriendListViewModel()
-    
+    @StateObject var frdVm: FriendListViewModel = FriendListViewModel()    
+    @StateObject var mapVm: MapViewModel = MapViewModel()
+     
     var body: some View {
         NavigationStack{
             ZStack(alignment: .bottom) {
@@ -18,10 +19,15 @@ struct ContentView: View {
                     switch selectedTab{
                     case 0: MapScreen()
                             .environmentObject(frdVm)
-                    case 1: ChatListScreen()
-                    case 2: ProfileScreen(FirestoreManager().user ?? "")
+                            .environmentObject(mapVm)
+                    case 1: GroupScreen()
+                            .environmentObject(frdVm)
+                            .environmentObject(mapVm)                            
+                    case 2: ChatListScreen()
+                    case 3: ProfileScreen(FirestoreManager().user ?? "")
                     default: MapScreen()
                             .environmentObject(frdVm)
+                            .environmentObject(mapVm)
                     }
                 }
                 .frame(maxHeight: .infinity)
@@ -32,17 +38,12 @@ struct ContentView: View {
     
     var tabbar: some View{
         ZStack{
-            HStack(alignment: .bottom, spacing: 70){
+            HStack(alignment: .center, spacing: 40){
                 ForEach(TabbarItem.allCases, id: \.self) { item in
                     let selected = selectedTab == item.rawValue
                     Image(systemName: item.icon)
                         .foregroundStyle(selected ? .white : .gray)
                         .font(.title)
-                        .background{
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(.black)
-                                .frame(width: selected ? 80 : 70, height: selected ? 80 : 70)
-                        }
                         .onTapGesture {
                             withAnimation(.smooth){
                                 selectedTab = item.rawValue
@@ -50,8 +51,13 @@ struct ContentView: View {
                         }
                 }
             }
+            .padding(.horizontal, 30)
+            .padding(.vertical)
+            .background{
+                Capsule()
+                    .fill(.black)
+            }
         }
-        .padding(.bottom, 30)
     }
 }
 

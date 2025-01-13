@@ -9,12 +9,10 @@ import Foundation
 import Firebase
 import FirebaseFirestore
 import FirebaseAuth
-import FirebaseStorage
 import MapKit
 
 class FirestoreManager {
     private let db = Firestore.firestore()
-    private let storage = Storage.storage()
     let user = Auth.auth().getUserID()
     
     func fetchUserInfo(uids: [String], completion: @escaping (Result<[User], Error>) -> Void) {
@@ -42,7 +40,7 @@ class FirestoreManager {
             completion(.success(users))
         }
     }
-
+    
     
     func fetchUserData(_ userId: String?, completion: @escaping (Result<User, Error>) -> Void) {
         if let userId = userId{
@@ -99,13 +97,13 @@ class FirestoreManager {
                 
                 if distance <= 500 {
                     let user = User(id: id,
-                                  uid: uid,
-                                  email: email,
-                                  displayName: displayName,
-                                  latitude: latitude,
-                                  longitude: longitude,
-                                  friendRequests: friendRequests,
-                                  friends: friends)
+                                    uid: uid,
+                                    email: email,
+                                    displayName: displayName,
+                                    latitude: latitude,
+                                    longitude: longitude,
+                                    friendRequests: friendRequests,
+                                    friends: friends)
                     nearbyUsers.append(user)
                 }
             }
@@ -113,6 +111,7 @@ class FirestoreManager {
             completion(.success(nearbyUsers))
         }
     }
+    
     func saveUserData(user: User, completion: @escaping (Result<Void, Error>) -> Void) {
         let userRef = db.collection("users").document(user.uid)
         print(user.uid)
@@ -173,17 +172,15 @@ class FirestoreManager {
         if let chatId = chatId {
             chatRef = db.collection("chats").document(chatId)
         } else {
-            chatRef = db.collection("chats").document() // Create a new chat
+            chatRef = db.collection("chats").document()
         }
         
         do {
             let chatData: [String: Any]
             if isNewChat {
-                // Creating a new chat
-                let chat = Chat(documentId: chatRef.documentID, users: participants, lastMessage: message)                
+                let chat = Chat(documentId: chatRef.documentID, users: participants, lastMessage: message)
                 chatData = try chat.toDictionary()
             } else {
-                // Updating an existing chat
                 chatData = ["lastMessage": try message.toDictionary()]
             }
             
@@ -199,7 +196,7 @@ class FirestoreManager {
                         if let error = error {
                             completion(.failure(error))
                         } else {
-                            completion(.success(chatRef.documentID)) // Return the chatId
+                            completion(.success(chatRef.documentID))
                         }
                     }
                 }
@@ -212,7 +209,6 @@ class FirestoreManager {
     
     func fetchMessages(chatId: String, participants: [User], completion: @escaping (Result<(String?, [Message]), Error>) -> Void) {
         if chatId != "" {
-            // Fetch all messages for the given chatId
             let messagesRef = db.collection("chats").document(chatId).collection("messages")
             messagesRef
                 .order(by: "dateCreated", descending: false)
@@ -229,7 +225,6 @@ class FirestoreManager {
                     }
                 }
         } else {
-            // Find chat by participants
             let participantIds = participants.map { $0.uid }
             let chatsRef = db.collection("chats")
             
@@ -360,13 +355,13 @@ class FirestoreManager {
             guard let document = document, document.exists,
                   let friendRequests = document.data()?["friendRequests"] as? [String] else {
                 completion(NSError(domain: "FirestoreError", code: -1,
-                                 userInfo: [NSLocalizedDescriptionKey: "User document not found"]))
+                                   userInfo: [NSLocalizedDescriptionKey: "User document not found"]))
                 return
             }
             
             if friendRequests.contains(currentUserId) {
                 completion(NSError(domain: "FirestoreError", code: -1,
-                                 userInfo: [NSLocalizedDescriptionKey: "Friend request already sent"]))
+                                   userInfo: [NSLocalizedDescriptionKey: "Friend request already sent"]))
                 return
             }
             
@@ -386,20 +381,18 @@ class FirestoreManager {
         let currentUserRef = db.collection("users").document(currentUserId)
         let requesterRef = db.collection("users").document(requesterId)
         
-        // Remove friend request and add to friends list for current user
         batch.updateData([
             "friendRequests": FieldValue.arrayRemove([requesterId]),
             "friends": FieldValue.arrayUnion([requesterId])
         ], forDocument: currentUserRef)
-        
-        // Add current user to requester's friends list
+                
         batch.updateData([
             "friends": FieldValue.arrayUnion([currentUserId])
         ], forDocument: requesterRef)
         
         batch.commit(completion: completion)
     }
-
+    
     func declineFriendRequest(currentUserId: String, requesterId: String, completion: @escaping (Error?) -> Void) {
         let currentUserRef = db.collection("users").document(currentUserId)
         
@@ -424,6 +417,216 @@ class FirestoreManager {
             }
             
             completion(.success(friendRequests.contains(currentUserId)))
+        }
+    }
+    
+    func createGroup(name: String, selectedFriends: [User], destination: CLLocationCoordinate2D, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let uid = user else {return}
+        do {
+            let uids = selectedFriends.map { $0.uid }
+                        
+            let grpRef: DocumentReference = db.collection("groups").document()
+            
+            let grpData: [String: Any]
+            let group = GroupModel(id: grpRef.documentID, groupName: name, users: selectedFriends, createUser: uid ,uids: uids, destination:
+                                ["destination": ["latitude": destination.latitude,"longitude":destination.longitude]])
+            
+            grpData = try group.toDictionary()
+            
+            grpRef.setData(grpData, merge: true) { error in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success("Group created successfully"))
+                }
+            }
+        } catch {
+            completion(.failure(error))
+        }
+    }
+    
+    func fetchGroup(completion: @escaping (Result<[GroupModel], Error>) -> Void) {
+        if let user = user{
+            db.collection("groups")
+                .whereField("uids", arrayContains: user)
+                .getDocuments(completion: { snapshot, error in
+                    if let error = error {
+                        completion(.failure(error))
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        completion(.success([]))
+                        return
+                    }
+                    
+                    var groups: [GroupModel] = []
+                    
+                    for document in documents {
+                        let data = document.data()
+                        
+                        guard
+                            let groupName = data["groupName"] as? String,
+                            let userDicts = data["users"] as? [[String: Any]],
+                            let uid = data["createUser"] as? String,
+                            let uids = data["uids"] as? [String],
+                            let destinationDict = data["destination"] as? [String: [String: Double]],
+                            let timestamp = data["createdAt"] as? Timestamp
+                        else {
+                            continue
+                        }
+                        
+                        var users: [User] = []
+                        for userDict in userDicts {
+                            if let jsonData = try? JSONSerialization.data(withJSONObject: userDict),
+                               let user = try? JSONDecoder().decode(User.self, from: jsonData) {
+                                users.append(user)
+                            }
+                        }
+                        
+                        let group = GroupModel(
+                            id: document.documentID,
+                            groupName: groupName,
+                            users: users,
+                            createUser: uid,
+                            uids: uids,
+                            destination: destinationDict,
+                            createdAt: timestamp.dateValue()
+                        )
+                        
+                        groups.append(group)
+                    }
+                    
+                    completion(.success(groups))
+                })
+        }
+    }
+    
+    func observeGroup(_ id: String, completion: @escaping (Result<GroupModel, Error>) -> Void) -> ListenerRegistration {
+        let documentRef = db.collection("groups").document(id)
+        
+        let listener = documentRef.addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let documentSnapshot = documentSnapshot, documentSnapshot.exists else {
+                completion(.failure(NSError(domain: "", code: 404, userInfo: [NSLocalizedDescriptionKey: "Document not found"])))
+                return
+            }
+            
+            do {
+                let groupData = documentSnapshot.data() ?? [:]
+                let groupJSON = try JSONSerialization.data(withJSONObject: groupData, options: [])
+                let group = try JSONDecoder().decode(GroupModel.self, from: groupJSON)
+                completion(.success(group))
+            } catch {
+                print("Failed to decode group: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+        
+        return listener
+    }
+
+    func stopObservingGroup(listener: ListenerRegistration?) {
+        listener?.remove()
+    }
+    
+    func deleteGroup(_ id: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let documentRef = db.collection("groups").document(id)
+        
+        documentRef.delete { error in
+            if let error = error {
+                completion(.failure(error))
+            } else {
+                completion(.success(()))
+            }
+        }
+    }
+
+    
+    func observeGroups(completion: @escaping (Result<[GroupModel], Error>) -> Void) {
+        if let user = user{
+            let groupsRef = db.collection("groups")
+            
+            groupsRef.addSnapshotListener { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    completion(.success([]))
+                    return
+                }
+                
+                var groups: [GroupModel] = []
+                
+                for document in documents {
+                    do {
+                        let groupData = document.data()
+                        if let uids = groupData["uids"] as? [String], uids.contains(user) {
+                            let groupJSON = try JSONSerialization.data(withJSONObject: groupData, options: [])
+                            let group = try JSONDecoder().decode(GroupModel.self, from: groupJSON)
+                            groups.append(group)
+                        }
+                    } catch {
+                        print("Failed to decode group: \(error.localizedDescription)")
+                    }
+                }
+                completion(.success(groups))
+            }
+        }
+    }
+    
+    func updateCurrentUserLocation(user: User) {
+        db.collection("groups").whereField("uids", arrayContains: user.uid).getDocuments { snapshot, error in
+            if let error = error {
+                print("Error fetching groups: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let documents = snapshot?.documents else {
+                print("No groups found for user.")
+                return
+            }
+                        
+            for document in documents {
+                let groupRef = document.reference
+                groupRef.updateData([
+                    "users": FieldValue.arrayRemove([[
+                        "id": user.id,
+                        "uid": user.uid,
+                        "email": user.email,
+                        "displayName": user.displayName ?? "",
+                        "latitude": user.latitude,
+                        "longitude": user.longitude
+                    ]])
+                ]) { error in
+                    if let error = error {
+                        print("Error removing user from group: \(error.localizedDescription)")
+                    } else {
+                        groupRef.updateData([
+                            "users": FieldValue.arrayUnion([[
+                                "id": user.id,
+                                "uid": user.uid,
+                                "email": user.email,
+                                "displayName": user.displayName ?? "",
+                                "latitude": user.latitude,
+                                "longitude": user.longitude
+                            ]])
+                        ]) { error in
+                            if let error = error {
+                                print("Error updating user location: \(error.localizedDescription)")
+                            } else {
+                                print("User location updated successfully.")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     

@@ -8,6 +8,7 @@ import SwiftUI
 
 struct FriendListView: View {
     @EnvironmentObject var vm: FriendListViewModel
+    @EnvironmentObject var mapVm: MapViewModel
     @Environment(\.dismiss) private var dismiss
         
     var body: some View {
@@ -67,7 +68,7 @@ struct FriendListView: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .onChange(of: vm.navigateToProfile) {
+        .onChange(of: mapVm.region) {
             dismiss()
         }
         .onChange(of: vm.navigateToChat) {

@@ -42,13 +42,14 @@ struct SignUpScreen: View {
         .alert("Do you want to login with biometric?", isPresented: $vm.isBiometricLogin) {
             Button("No", role: .cancel){
                 vm.isEnterUserInfo = true
+                vm.saveAccountToKeychain()
                 vm.loginWithEmail() }
             Button("Yes", role: .destructive){ vm.saveAccountToKeychain() }
         }
         .sheet(isPresented: $vm.isEnterUserInfo, content: {userInfo})
         
     }
-    
+     
     var userInfo: some View{
         VStack(spacing: 20){
             if vm.isLoggingIn{

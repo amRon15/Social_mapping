@@ -7,7 +7,6 @@
 
 import Firebase
 import Foundation
-import FirebaseDatabase
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
@@ -44,7 +43,6 @@ class ChatViewModel: ObservableObject {
             self.firestoreManager.fetchMessages(chatId: self.chatId, participants: [self.user, self.chatUser]) { result in
                 switch result {
                 case .success(let (chatId, messages)):
-                    self.messages = messages
                     if self.chatId == ""{
                         if let chatId = chatId{
                             self.chatId = chatId

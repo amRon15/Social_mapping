@@ -27,12 +27,14 @@ struct ChatScreen: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .trailing)
                         } else{
-                            HStack{
-                                Text(message.text)
-                                    .padding(10)
-                                    .background(RoundedRectangle(cornerRadius: 20).fill(.gray))
+                            if message.text.trimmingCharacters(in: .whitespacesAndNewlines) != ""{
+                                HStack{
+                                    Text(message.text)
+                                        .padding(10)
+                                        .background(RoundedRectangle(cornerRadius: 20).fill(.gray))
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }

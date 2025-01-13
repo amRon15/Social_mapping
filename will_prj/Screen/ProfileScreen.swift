@@ -17,61 +17,52 @@ struct ProfileScreen: View {
     
     var body: some View {
         NavigationStack{
-            ScrollView(.vertical) {
-                VStack{
-                    vm.userImage?
-                        .resizable()
-                        .frame(width: 200, height: 200)
-                        .aspectRatio(contentMode: .fill)
-                        .clipShape(Circle())
-                    Text(vm.user?.displayName ?? "Annoymous")
-                        .font(.title2)
-                    if !vm.isMyUser{
-                        HStack{
-                            Button("Add") {
-                                
-                            }
+            VStack{
+                vm.userImage?
+                    .resizable()
+                    .frame(width: 200, height: 200)
+                    .aspectRatio(contentMode: .fill)
+                    .clipShape(Circle())
+                Text(vm.user?.displayName ?? "Annoymous")
+                    .font(.title2)
+                VStack(spacing: 10){
+                    Button {
+                        vm.showAlert.toggle()
+                    } label: {
+                        Label("Biometric login", systemImage: "faceid")
                             .profileButtonStyle()
-                            Button("Message") {
-                                
-                            }
-                            .profileButtonStyle()
-                        }
-                        .padding(.horizontal)
-                    }else{
-                        Button {
-                            vm.isLogout.toggle()
-                        } label: {
-                            Text("Logout")
-                                .profileButtonStyle()
-                                .padding(.horizontal)
-                        }
+                            .padding(.horizontal)
                     }
-                    Divider()
-                        .padding(.top, 20)
-                    LazyVGrid(columns: vm.columns){
-//                        ForEach(vm.userPosts, id: \.self){post in
-//                            
-//                        }
-                    }
-                    Spacer()
-                }
-                .alert("Are you sure to logout?", isPresented: $vm.isLogout) {
-                    Button("No", role: .cancel){
+
+                    Button {
                         vm.isLogout.toggle()
-                    }
-                    Button("Yes", role: .destructive){ loginVm.logout() }
-                }
-                .toolbar{
-                    ToolbarItem(placement: .confirmationAction) {
-                        Image(systemName: "gearshape")                            
+                    } label: {
+                        Text("Logout")
+                            .profileButtonStyle()
+                            .padding(.horizontal)
                     }
                 }
             }
+            .alert("Are you sure to logout?", isPresented: $vm.isLogout) {
+                Button("Cancel", role: .cancel){
+                    vm.isLogout.toggle()
+                }
+                Button("Confirm", role: .destructive){ loginVm.logout() }
+            }
+            .alert("Enable biometric login?", isPresented: $vm.showAlert){
+                Button("Cancel", role: .cancel){
+                    vm.showAlert.toggle()
+                }
+                Button("Confirm") {
+                    vm.showAlert.toggle()
+                    loginVm.checkPolicy()
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
     }
 }
 
 #Preview {
-//    ProfileScreen()
+    //    ProfileScreen()
 }

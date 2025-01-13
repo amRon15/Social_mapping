@@ -9,6 +9,7 @@ import Foundation
 
 enum TabbarItem: Int, CaseIterable{
     case home = 0
+    case group
     case chat
     case profile
     
@@ -16,10 +17,12 @@ enum TabbarItem: Int, CaseIterable{
         switch self {
         case .home:
             return "house"
+        case .group:
+            return "person.line.dotted.person.fill"
         case .chat:
             return "ellipsis.bubble"
         case .profile:
-            return "person.crop.circle"
+            return "person.fill"
         }
     }
 }

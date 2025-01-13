@@ -9,12 +9,14 @@ import FirebaseAuth
 import FirebaseFirestore
 import Firebase
 import SwiftUI
+import MapKit
 
 class FriendListViewModel: ObservableObject {
     @Published var friendRequests: [User] = []
     @Published var friends: [User] = []
+    @Published var friendsImage: [String: Image] = [:]
     @Published var currentUser: User?
-        
+                
     @Published var selectedFriend: User?
     @Published var showFriendSheet: Bool = false
     
@@ -63,6 +65,7 @@ class FriendListViewModel: ObservableObject {
             case .success(let users):
                 DispatchQueue.main.async {
                     self.friends = users
+                    self.fetchFriendsImage()
                 }
             case .failure(let error):
                 print("Error loading friends: \(error.localizedDescription)")
@@ -228,4 +231,20 @@ class FriendListViewModel: ObservableObject {
             }
         }
     }
+    
+    func fetchFriendsImage(){
+        for friend in friends {
+            CloudinaryManager().fetchImage(publicId: friend.uid) { image in
+                DispatchQueue.main.async {
+                    self.friendsImage[friend.uid] = image
+                }
+            }
+        }
+    }
+    
+    func getFriendImage(_ user: User) -> Image{
+        return friendsImage[user.uid] ?? Image(systemName: "person.circle.fill")
+    }
+    
+    
 }

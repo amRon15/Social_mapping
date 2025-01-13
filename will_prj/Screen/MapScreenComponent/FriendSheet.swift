@@ -13,6 +13,7 @@ struct FriendSheet: View {
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var vm: FriendListViewModel
+    @EnvironmentObject var mapVm: MapViewModel
     
     var body: some View {
         VStack(spacing: 20) {
@@ -33,12 +34,12 @@ struct FriendSheet: View {
             } else {
                 if vm.isFriend {
                     Button {
-                        vm.navigateToProfile.toggle()                        
                         dismiss()
+                        mapVm.moveToRegion(user)
                     } label: {
                         HStack{
-                            Image(systemName: "person.crop.circle.fill")
-                            Text("Profile")
+                            Image(systemName: "location.fill")
+                            Text("Location")
                         }
                         .profileButtonStyle()
                         .padding(.horizontal)
@@ -134,7 +135,7 @@ struct FriendSheet: View {
         .onChange(of: vm.navigateToChat) { oldValue, newValue in
             dismiss()
         }
-        .onChange(of: vm.navigateToProfile) { oldValue, newValue in
+        .onChange(of: mapVm.region) { oldValue, newValue in
             dismiss()
         }
     }
