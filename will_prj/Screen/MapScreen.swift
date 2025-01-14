@@ -30,7 +30,7 @@ struct MapScreen: View {
                                         .aspectRatio(contentMode: .fill)
                                         .frame(width: 50, height: 50)
                                         .clipShape(Circle())
-                                        .foregroundStyle(.gray)                                        
+                                        .foregroundStyle(.gray)
                                         .overlay(Circle().stroke(Color.white, lineWidth: 2))
                                         .shadow(radius: 3)
                                 }

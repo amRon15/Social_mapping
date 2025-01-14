@@ -149,7 +149,8 @@ class GroupViewModel: ObservableObject{
         fireStoreManager.observeGroups { result in
             switch result {
             case .success(let success):
-                self.groups = success                
+                self.groups = success
+                print(success)
             case .failure(let failure):
                 print("Fetch groups failed: \(failure.localizedDescription)")
             }

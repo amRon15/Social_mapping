@@ -73,9 +73,17 @@
 		08A1C5582D32E22000B1F14E /* Exceptions for "GroupActivity" folder in "will_prj" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Assets.xcassets,
 				GroupActivityLiveActivity.swift,
 			);
 			target = 08E994E52D15B6B600789E4C /* will_prj */;
+		};
+		08A1C5912D35B5B300B1F14E /* Exceptions for "will_prj" folder in "GroupActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = 08A1C51D2D32CC8200B1F14E /* GroupActivityExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -91,6 +99,9 @@
 		};
 		08E994E82D15B6B600789E4C /* will_prj */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				08A1C5912D35B5B300B1F14E /* Exceptions for "will_prj" folder in "GroupActivityExtension" target */,
+			);
 			path = will_prj;
 			sourceTree = "<group>";
 		};
@@ -584,6 +595,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"will_prj/Preview Content\"";
@@ -624,6 +636,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"will_prj/Preview Content\"";

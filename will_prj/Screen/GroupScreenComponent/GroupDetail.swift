@@ -23,10 +23,10 @@ struct GroupDetail: View {
                                 vm.getMemberImage(member.uid)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 50, height: 50)
+                                    .frame(width: member.uid == user ? 60 : 50, height: member.uid == user ? 60 : 50)
                                     .clipShape(Circle())
                                     .foregroundStyle(.gray)
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .overlay(Circle().stroke(member.uid == user ? Color.blue : Color.white, lineWidth: 2))
                                     .shadow(radius: 3)
                                 
                             }

@@ -445,11 +445,11 @@ class FirestoreManager {
         }
     }
     
-    func fetchGroup(completion: @escaping (Result<[GroupModel], Error>) -> Void) {
-        if let user = user{
-            db.collection("groups")
-                .whereField("uids", arrayContains: user)
-                .getDocuments(completion: { snapshot, error in
+    func observeGroups(completion: @escaping (Result<[GroupModel], Error>) -> Void) {
+            if let user = user{
+                let groupsRef = db.collection("groups")
+                
+                groupsRef.addSnapshotListener { snapshot, error in
                     if let error = error {
                         completion(.failure(error))
                         return
@@ -463,44 +463,22 @@ class FirestoreManager {
                     var groups: [GroupModel] = []
                     
                     for document in documents {
-                        let data = document.data()
-                        
-                        guard
-                            let groupName = data["groupName"] as? String,
-                            let userDicts = data["users"] as? [[String: Any]],
-                            let uid = data["createUser"] as? String,
-                            let uids = data["uids"] as? [String],
-                            let destinationDict = data["destination"] as? [String: [String: Double]],
-                            let timestamp = data["createdAt"] as? Timestamp
-                        else {
-                            continue
-                        }
-                        
-                        var users: [User] = []
-                        for userDict in userDicts {
-                            if let jsonData = try? JSONSerialization.data(withJSONObject: userDict),
-                               let user = try? JSONDecoder().decode(User.self, from: jsonData) {
-                                users.append(user)
+                        do {
+                            let groupData = document.data()
+                            if let uids = groupData["uids"] as? [String], uids.contains(user) {
+                                let groupJSON = try JSONSerialization.data(withJSONObject: groupData, options: [])
+                                let group = try JSONDecoder().decode(GroupModel.self, from: groupJSON)
+                                groups.append(group)
                             }
+                        } catch {
+                            print("Failed to decode group: \(error.localizedDescription)")
                         }
-                        
-                        let group = GroupModel(
-                            id: document.documentID,
-                            groupName: groupName,
-                            users: users,
-                            createUser: uid,
-                            uids: uids,
-                            destination: destinationDict,
-                            createdAt: timestamp.dateValue()
-                        )
-                        
-                        groups.append(group)
                     }
-                    
                     completion(.success(groups))
-                })
+                }
+            }
         }
-    }
+
     
     func observeGroup(_ id: String, completion: @escaping (Result<GroupModel, Error>) -> Void) -> ListenerRegistration {
         let documentRef = db.collection("groups").document(id)
@@ -545,41 +523,6 @@ class FirestoreManager {
             }
         }
     }
-
-    
-    func observeGroups(completion: @escaping (Result<[GroupModel], Error>) -> Void) {
-        if let user = user{
-            let groupsRef = db.collection("groups")
-            
-            groupsRef.addSnapshotListener { snapshot, error in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else {
-                    completion(.success([]))
-                    return
-                }
-                
-                var groups: [GroupModel] = []
-                
-                for document in documents {
-                    do {
-                        let groupData = document.data()
-                        if let uids = groupData["uids"] as? [String], uids.contains(user) {
-                            let groupJSON = try JSONSerialization.data(withJSONObject: groupData, options: [])
-                            let group = try JSONDecoder().decode(GroupModel.self, from: groupJSON)
-                            groups.append(group)
-                        }
-                    } catch {
-                        print("Failed to decode group: \(error.localizedDescription)")
-                    }
-                }
-                completion(.success(groups))
-            }
-        }
-    }
     
     func updateCurrentUserLocation(user: User) {
         db.collection("groups").whereField("uids", arrayContains: user.uid).getDocuments { snapshot, error in
@@ -592,43 +535,49 @@ class FirestoreManager {
                 print("No groups found for user.")
                 return
             }
-                        
+            
             for document in documents {
                 let groupRef = document.reference
-                groupRef.updateData([
-                    "users": FieldValue.arrayRemove([[
+                
+                self.db.runTransaction({ (transaction, errorPointer) -> Any? in
+                    let groupSnapshot: DocumentSnapshot
+                    do {
+                        groupSnapshot = try transaction.getDocument(groupRef)
+                    } catch {
+                        errorPointer?.pointee = error as NSError
+                        return nil
+                    }
+                                        
+                    guard var users = groupSnapshot.data()?["users"] as? [[String: Any]] else {
+                        print("Failed to fetch users array.")
+                        return nil
+                    }
+                                        
+                    users.removeAll { $0["uid"] as? String == user.uid }
+                                        
+                    let newUser = [
                         "id": user.id,
                         "uid": user.uid,
                         "email": user.email,
+                        "friendRequests": user.friendRequests,
+                        "friends": user.friends,
                         "displayName": user.displayName ?? "",
                         "latitude": user.latitude,
                         "longitude": user.longitude
-                    ]])
-                ]) { error in
+                    ]
+                    users.append(newUser)
+                                        
+                    transaction.updateData(["users": users], forDocument: groupRef)
+                    
+                    return nil
+                }) { (_, error) in
                     if let error = error {
-                        print("Error removing user from group: \(error.localizedDescription)")
+                        print("Error updating user location: \(error.localizedDescription)")
                     } else {
-                        groupRef.updateData([
-                            "users": FieldValue.arrayUnion([[
-                                "id": user.id,
-                                "uid": user.uid,
-                                "email": user.email,
-                                "displayName": user.displayName ?? "",
-                                "latitude": user.latitude,
-                                "longitude": user.longitude
-                            ]])
-                        ]) { error in
-                            if let error = error {
-                                print("Error updating user location: \(error.localizedDescription)")
-                            } else {
-                                print("User location updated successfully.")
-                            }
-                        }
+                        print("User location updated successfully.")
                     }
                 }
             }
         }
     }
-    
-    
 }

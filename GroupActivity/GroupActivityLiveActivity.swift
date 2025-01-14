@@ -31,6 +31,10 @@ struct GroupActivityLiveActivity: Widget {
                     .font(.headline)
                 HStack{
                     VStack{
+                        Image("Logo")
+                            .resizable()
+                            .frame(width: 15, height: 15)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         Text("Member")
                             .font(.headline)
                         ForEach(context.state.distances.keys.sorted(), id: \.self) { user in
@@ -50,6 +54,8 @@ struct GroupActivityLiveActivity: Widget {
                     .foregroundStyle(.gray)
                     .frame(maxHeight: .infinity, alignment: .center)
                     VStack{
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(.blue)
                         Text("Distance")
                             .font(.headline)
                         ForEach(context.state.distances.keys.sorted(), id: \.self) { user in
@@ -69,6 +75,11 @@ struct GroupActivityLiveActivity: Widget {
                 // various regions, like leading/trailing/center/bottom
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(spacing: 5) {
+                        Image("Logo")
+                            .resizable()
+                            .clipShape(.rect(cornerRadius: 10))
+                            .frame(width: 20, height: 20)
+                            
                         Text("Member")
                             .font(.caption)
                         
@@ -104,6 +115,8 @@ struct GroupActivityLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(spacing: 5) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(.blue)
                         Text("Distance")
                             .font(.caption)
                         
@@ -129,12 +142,21 @@ struct GroupActivityLiveActivity: Widget {
                         .frame(maxHeight: .infinity, alignment: .center)
                 }
             } compactLeading: {
-                Image(systemName: "mappin.and.ellipse")
-                    .foregroundStyle(.yellow)
+                Image("Logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 15, height: 15)
+                    .clipShape(.rect(cornerRadius: 10))
+                    
             } compactTrailing: {
-                Image(systemName: "ellipsis")
-            } minimal: {
                 Image(systemName: "mappin.and.ellipse")
+                    .foregroundStyle(.blue)
+            } minimal: {
+                Image("Logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 15, height: 15)
+                    .clipShape(.rect(cornerRadius: 10))
             }
             .keylineTint(Color.black)
             
