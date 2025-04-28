@@ -10,7 +10,7 @@ import Cloudinary
 import SwiftUI
 
 class CloudinaryManager{
-    private let config = CLDConfiguration(cloudName: "do8pmrsqi", apiKey: "988174913548525", apiSecret: "sStjTCQuMNgXJA345RzA4pvjVgI", secure: true)
+    private let config = /*Api Key*/
     static let shared = CloudinaryManager()
     private var cloudinary: CLDCloudinary?
     
