@@ -37,6 +37,9 @@ It emphasizes both proximity-based networking and customizable user profiles, ai
 ![IMG_7100](https://github.com/user-attachments/assets/2cb1fb96-e7ad-4e46-9535-e73528d445de)
 ![IMG_7101](https://github.com/user-attachments/assets/310ea8a7-178f-475e-b5a6-03a2a77d3f74)
 
+### Dynamic Island
+![IMG_7102](https://github.com/user-attachments/assets/d4474240-eeab-4a82-a6bc-7c9f16af1c73)
+
 ### Chat
 ![IMG_7098](https://github.com/user-attachments/assets/56f56055-624a-4806-8512-d4e69b926fba)
 ![IMG_7097](https://github.com/user-attachments/assets/2ee47b34-a621-45a4-b2b5-c6b0f631575f)
@@ -45,9 +48,6 @@ It emphasizes both proximity-based networking and customizable user profiles, ai
 ![IMG_7103](https://github.com/user-attachments/assets/098bcd0b-fe55-44e1-94d9-4b608212fc6d)
 ![IMG_7091](https://github.com/user-attachments/assets/d8c6d08e-bac7-4b01-bc6f-b8b1674bf250)
 ![IMG_7092](https://github.com/user-attachments/assets/60c93554-a78a-4eb9-ac7f-3c69c0059bec)
-
-### Dynamic Island
-![IMG_7102](https://github.com/user-attachments/assets/d4474240-eeab-4a82-a6bc-7c9f16af1c73)
 
 ## License
 This project is licensed under the MIT License.
