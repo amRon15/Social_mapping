@@ -9,8 +9,10 @@ import SwiftUI
 import FirebaseCore
 import Cloudinary
 import ActivityKit
+import UserNotifications
+import FirebaseMessaging
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         FirebaseApp.configure()
@@ -21,6 +23,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationWillTerminate(){
         GroupViewModel.shared.endLiveActivity()
     }
+    
+    
 }
 
 @main
